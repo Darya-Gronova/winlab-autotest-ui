@@ -8,4 +8,4 @@ class BasePage:
         self.page.goto(url, wait_until='networkidle')
 
     def reload(self):  # Метод для перезагрузки страницы
-        self.page.reload(wait_until='domcontentloaded')
+        self.page.reload(wait_until='networkidle')
