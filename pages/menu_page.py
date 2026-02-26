@@ -18,3 +18,9 @@ class MenuPage(BasePage):
 
     def check_visible_menu_link(self):
         expect(self.wrong_menu_visible).to_be_visible()
+
+    def check_menu_link(self):
+        # Ensure main navigation links are visible after successful authorization
+        expect(self.monitoring_link).to_be_visible()
+        expect(self.object_link).to_be_visible()
+        expect(self.directory_link).to_be_visible()
