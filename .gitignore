@@ -9,3 +9,7 @@ Thumbs.db
 *.log
 *.tmp
 *~
+
+# Allure artifacts
+allure-results/
+allure-report/

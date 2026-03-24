@@ -1,5 +1,5 @@
 import pytest
-from playwright.async_api import Page
+from playwright.sync_api import Page
 from pages.login_page import LoginPage
 from pages.matrix_page import MatrixPage
 from pages.menu_page import MenuPage

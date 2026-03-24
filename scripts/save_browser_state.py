@@ -13,13 +13,15 @@ import json
 
 AUTH_LOGIN = os.environ.get('AUTH_LOGIN', 'dariak')
 AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', 'r63l80AV')
-AUTH_URL = 'https://devatlaskm.marketing-logic.ru/authorization'
-OUTPUT = os.path.join(os.path.dirname(__file__), '..', 'browser-state.json')
+AUTH_URL = os.environ.get('AUTH_URL', 'https://devatlaskm.marketing-logic.ru/authorization')
+# allow running headless in CI by setting BROWSER_HEADLESS=1 (default False)
+BROWSER_HEADLESS = os.environ.get('BROWSER_HEADLESS', '0') in ('1', 'true', 'True')
+OUTPUT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'browser-state.json'))
 
 
 def save_state():
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=False)
+        browser = pw.chromium.launch(headless=BROWSER_HEADLESS)
         context = browser.new_context()
         page = context.new_page()
         page.goto(AUTH_URL, wait_until='networkidle')
@@ -43,11 +45,10 @@ def save_state():
 
         storage = context.storage_state()
 
-        out_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'browser-state.json'))
-        with open(out_path, 'w', encoding='utf-8') as f:
+        with open(OUTPUT, 'w', encoding='utf-8') as f:
             json.dump(storage, f, ensure_ascii=False, indent=2)
 
-        print('Saved storage state to', out_path)
+        print('Saved storage state to', OUTPUT)
         browser.close()
 
 

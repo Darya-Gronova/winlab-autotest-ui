@@ -1,0 +1,86 @@
+name: Pytest + Allure
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Set up Node (for allure CLI)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Python deps
+      run: |
+        python -m pip install -U pip
+        pip install -r requirements.txt
+
+    - name: Install Playwright browsers
+      run: |
+        python -m playwright install chromium
+    - name: Create browser-state.json (login)  # optional: will skip if secrets not set
+      if: secrets.AUTH_LOGIN != '' && secrets.AUTH_PASSWORD != ''
+      env:
+        AUTH_LOGIN: ${{ secrets.AUTH_LOGIN }}
+        AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
+        BROWSER_HEADLESS: '1'
+      run: |
+        # create browser-state.json using helper script
+        python scripts/save_browser_state.py
+
+    - name: Run tests and collect Allure results
+      id: run_tests
+      env:
+        TZ: UTC
+      run: |
+        TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+        RESULTS_DIR="allure-results-${TIMESTAMP}"
+        echo "Results dir: ${RESULTS_DIR}"
+        python -m pytest --maxfail=1 --alluredir="${RESULTS_DIR}"
+        echo "results_dir=${RESULTS_DIR}" >> "$GITHUB_OUTPUT"
+
+    - name: Install Allure CLI
+      run: |
+        npm install -g allure-commandline --no-update-notifier --no-fund
+
+    - name: Generate Allure report
+      id: generate_report
+      run: |
+        RESULTS_DIR=${{ steps.run_tests.outputs.results_dir }}
+        REPORT_DIR="allure-report-${RESULTS_DIR##*-}"
+        echo "Generating report from ${RESULTS_DIR} -> ${REPORT_DIR}"
+        allure generate --clean "${RESULTS_DIR}" -o "${REPORT_DIR}"
+        echo "report_dir=${REPORT_DIR}" >> "$GITHUB_OUTPUT"
+
+    - name: Upload Allure results artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-results
+        path: ${{ steps.run_tests.outputs.results_dir }}
+
+    - name: Upload Allure report artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-report
+        path: ${{ steps.generate_report.outputs.report_dir }}
+
+    - name: Publish Allure report to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ${{ steps.generate_report.outputs.report_dir }}
+        publish_branch: gh-pages
